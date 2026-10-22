@@ -14,7 +14,7 @@ $img->inplace->fft_c2c(2);           # in place (complex input)
 my $X   = fft_r2c($x, 1);            # real (n, ...) -> complex (n/2+1, ...)
 my $x2  = ifft_c2r($X, 1, $n);       # back to real (n, ...)
 
-$PDL::FFTDispatcher::BACKEND = 'fftw3';   # 'auto' (default), 'pocket', 'fftw3', 'pdl'
+$PDL::FFTDispatcher::BACKEND = 'fftw3';   # 'auto' (default), 'pocketfft', 'fftw3', 'pdl'
 ```
 
 - The transforms run over the first `$rank` dims and broadcast over the
@@ -47,7 +47,7 @@ installed.
 
 ## Tests
 
-`t/01-dispatch.t` checks every backend (auto, pocket, pdl, and fftw3 when
+`t/01-dispatch.t` checks every backend (auto, pocketfft, pdl, and fftw3 when
 PDL::FFTW3 is installed) against a direct DFT applied axis by axis (1 to 3
 dims, every rank) and a 2-D plane wave with a known spectrum; the factor
 count against known lengths; backend selection, including float input; that

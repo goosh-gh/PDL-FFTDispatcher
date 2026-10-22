@@ -10,7 +10,7 @@ use PDL::FFTDispatcher qw(:all);
 
 my $PI = 3.14159265358979323846;
 my $HAVE_FFTW3 = eval { require PDL::FFTW3; 1 } ? 1 : 0;
-my @BACKENDS = ('auto', 'pocket', 'pdl', ($HAVE_FFTW3 ? 'fftw3' : ()));
+my @BACKENDS = ('auto', 'pocketfft', 'pdl', ($HAVE_FFTW3 ? 'fftw3' : ()));
 diag("PDL::FFTW3 not installed: the fftw3 backend is not tested") unless $HAVE_FFTW3;
 
 sub maxerr { my ($p, $q) = @_; return ($p - $q)->abs->max->sclr }
@@ -97,6 +97,12 @@ for my $be (@BACKENDS) {
 {
     local $PDL::FFTDispatcher::BACKEND = 'nonsense';
     ok(!eval { fft_backend([8]); 1 }, 'unknown $BACKEND croaks');
+}
+{
+    local $PDL::FFTDispatcher::BACKEND = 'pocketfft';
+    is(fft_backend([8]), 'PDL::PocketFFT', "'pocketfft': PDL::PocketFFT");
+    local $PDL::FFTDispatcher::BACKEND = 'pocket';
+    ok(!eval { fft_backend([8]); 1 }, "'pocket' is not a backend name (it is 'pocketfft')");
 }
 SKIP: {
     skip 'PDL::FFTW3 is installed', 1 if $HAVE_FFTW3;

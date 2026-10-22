@@ -17,11 +17,11 @@ our @EXPORT_OK = qw(fft_c2c ifft_c2c fft_r2c ifft_c2r fft_inplace ifft_inplace
                     fft_backend fft_ok fft_len);
 our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
-# 'auto'   : PDL::PocketFFT; PDL::FFTW3 for float / cfloat input when it is
-#            installed (so the result stays in single precision)
-# 'pocket' : PDL::PocketFFT for every call
-# 'fftw3'  : PDL::FFTW3 for every call (croaks when it is not installed)
-# 'pdl'    : PDL::FFT; croaks for a length it does not transform correctly
+# 'auto'      : PDL::PocketFFT; PDL::FFTW3 for float / cfloat input when it is
+#               installed (so the result stays in single precision)
+# 'pocketfft' : PDL::PocketFFT for every call
+# 'fftw3'     : PDL::FFTW3 for every call (croaks when it is not installed)
+# 'pdl'       : PDL::FFT; croaks for a length it does not transform correctly
 our $BACKEND = 'auto';
 
 my $NFACTOR = 11;    # size of factor[] in PDL's lib/PDL/FFT/fftn.c
@@ -98,13 +98,13 @@ sub fft_backend {
     my ($len, %o) = @_;
     my @n = ref($len) eq 'ARRAY' ? @$len : ($len);
     my $b = $BACKEND;
-    croak "PDL::FFTDispatcher: \$BACKEND must be 'auto', 'pocket', 'fftw3' or 'pdl', not '$b'"
-        unless defined $b && $b =~ /\A(?:auto|pocket|fftw3|pdl)\z/;
+    croak "PDL::FFTDispatcher: \$BACKEND must be 'auto', 'pocketfft', 'fftw3' or 'pdl', not '$b'"
+        unless defined $b && $b =~ /\A(?:auto|pocketfft|fftw3|pdl)\z/;
     if ($b eq 'auto') {
         return 'PDL::FFTW3' if $o{float} && _have_fftw3();
         return 'PDL::PocketFFT';
     }
-    return 'PDL::PocketFFT' if $b eq 'pocket';
+    return 'PDL::PocketFFT' if $b eq 'pocketfft';
     if ($b eq 'fftw3') {
         croak "PDL::FFTDispatcher: \$BACKEND is 'fftw3' but PDL::FFTW3 is not installed" unless _have_fftw3();
         return 'PDL::FFTW3';
@@ -290,7 +290,7 @@ PDL::FFTDispatcher - one calling convention for FFTs in PDL, over PDL::PocketFFT
     my $X   = fft_r2c($x, 1);           # real (n, ...) -> complex (n/2+1, ...)
     my $x2  = ifft_c2r($X, 1, $n);      # back to real (n, ...)
 
-    $PDL::FFTDispatcher::BACKEND = 'fftw3';    # or 'pocket', 'pdl', 'auto' (default)
+    $PDL::FFTDispatcher::BACKEND = 'fftw3';    # or 'pocketfft', 'pdl', 'auto' (default)
 
 =head1 DESCRIPTION
 
@@ -308,7 +308,7 @@ The library is chosen by C<$PDL::FFTDispatcher::BACKEND>:
 PDL::PocketFFT (double precision). For float or cfloat input, PDL::FFTW3
 when it is installed, so the result stays in single precision.
 
-=item pocket
+=item pocketfft
 
 PDL::PocketFFT for every call.
 
