@@ -1,0 +1,5 @@
+MANIFEST
+Makefile.PL
+README.md
+lib/PDL/FFTDispatcher.pm
+t/01-dispatch.t
