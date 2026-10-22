@@ -4,6 +4,9 @@
 # in-place and method forms, float handling and argument checks.
 use strict;
 use warnings;
+# the cases below assume the module's own default; a machine-wide
+# PDL_FFTDISPATCHER_BACKEND would change it (it is tested in child perls at the end)
+BEGIN { delete $ENV{PDL_FFTDISPATCHER_BACKEND} }
 use Test::More;
 use PDL;
 use PDL::FFTDispatcher qw(:all);
@@ -138,5 +141,35 @@ ok(!eval { fft_c2c(zeroes(cdouble, 4, 4), 3); 1 }, 'fft_c2c croaks when rank > n
 ok(!eval { fft_r2c(zeroes(cdouble, 4), 1); 1 },    'fft_r2c croaks on complex input');
 ok(!eval { ifft_c2r(zeroes(cdouble, 5), 1, 12); 1 }, 'ifft_c2r croaks when n0/2+1 != frequencies');
 ok(!eval { fft_inplace(zeroes(4), zeroes(5)); 1 }, 'fft_inplace croaks on mismatched dims');
+
+# --- PDL_FFTDISPATCHER_BACKEND gives the initial $BACKEND -------------------
+# (each case in a child perl, because the variable is read when the module loads)
+{
+    my $child = sub {
+        my ($env, $code) = @_;
+        local $ENV{PDL_FFTDISPATCHER_BACKEND};
+        if (defined $env) { $ENV{PDL_FFTDISPATCHER_BACKEND} = $env } else { delete $ENV{PDL_FFTDISPATCHER_BACKEND} }
+        my @inc = map { "-I$_" } grep { !ref } @INC;
+        open my $fh, '-|', $^X, @inc, '-e', "use PDL; use PDL::FFTDispatcher qw(fft_backend); $code"
+            or die "child: $!";
+        local $/;
+        my $out = <$fh>;
+        close $fh;
+        return $out;
+    };
+    my $show = 'print $PDL::FFTDispatcher::BACKEND, " ", fft_backend([1000]), "\n"';
+    is($child->(undef, $show), "auto PDL::PocketFFT\n", 'unset: auto');
+    is($child->('', $show), "auto PDL::PocketFFT\n", 'empty: auto');
+    is($child->('pdl', $show), "pdl PDL::FFT\n", "PDL_FFTDISPATCHER_BACKEND=pdl");
+    is($child->('pocketfft', $show), "pocketfft PDL::PocketFFT\n", "PDL_FFTDISPATCHER_BACKEND=pocketfft");
+    SKIP: {
+        skip 'PDL::FFTW3 not installed', 1 unless $HAVE_FFTW3;
+        is($child->('fftw3', $show), "fftw3 PDL::FFTW3\n", "PDL_FFTDISPATCHER_BACKEND=fftw3");
+    }
+    like($child->('pdl', '$PDL::FFTDispatcher::BACKEND = "pocketfft"; ' . $show), qr/^pocketfft PDL::PocketFFT$/m,
+         'assigning $BACKEND in code overrides the environment');
+    like($child->('bogus', 'print eval { fft_backend([8]); 1 } ? "ran\n" : $@'),
+         qr/not 'bogus'.*PDL_FFTDISPATCHER_BACKEND/, 'an unknown name croaks at first use and names the variable');
+}
 
 done_testing();

@@ -22,7 +22,10 @@ our %EXPORT_TAGS = (all => \@EXPORT_OK);
 # 'pocketfft' : PDL::PocketFFT for every call
 # 'fftw3'     : PDL::FFTW3 for every call (croaks when it is not installed)
 # 'pdl'       : PDL::FFT; croaks for a length it does not transform correctly
-our $BACKEND = 'auto';
+# The initial value comes from the environment variable PDL_FFTDISPATCHER_BACKEND
+# when it is set (for example 'fftw3' on a machine whose FFTW is built with SIMD).
+our $BACKEND = defined $ENV{PDL_FFTDISPATCHER_BACKEND} && length $ENV{PDL_FFTDISPATCHER_BACKEND}
+             ? $ENV{PDL_FFTDISPATCHER_BACKEND} : 'auto';
 
 my $NFACTOR = 11;    # size of factor[] in PDL's lib/PDL/FFT/fftn.c
 my %NF;
@@ -98,7 +101,8 @@ sub fft_backend {
     my ($len, %o) = @_;
     my @n = ref($len) eq 'ARRAY' ? @$len : ($len);
     my $b = $BACKEND;
-    croak "PDL::FFTDispatcher: \$BACKEND must be 'auto', 'pocketfft', 'fftw3' or 'pdl', not '$b'"
+    croak "PDL::FFTDispatcher: \$BACKEND must be 'auto', 'pocketfft', 'fftw3' or 'pdl', not '"
+        . ($b // '') . "' (its initial value comes from PDL_FFTDISPATCHER_BACKEND when that is set)"
         unless defined $b && $b =~ /\A(?:auto|pocketfft|fftw3|pdl)\z/;
     if ($b eq 'auto') {
         return 'PDL::FFTW3' if $o{float} && _have_fftw3();
@@ -323,6 +327,12 @@ length it does not handle correctly (more than 11 factors in fftn.c, see
 L</fft_ok>), instead of calling it.
 
 =back
+
+When the environment variable C<PDL_FFTDISPATCHER_BACKEND> is set (to one of
+the names above) when the module is loaded, it gives the initial value of
+C<$BACKEND>, so a machine can have its own default without changes to the
+code, e.g. C<PDL_FFTDISPATCHER_BACKEND=fftw3> where FFTW is built with SIMD.
+Assigning C<$BACKEND> in the code overrides it.
 
 =head1 FUNCTIONS
 
